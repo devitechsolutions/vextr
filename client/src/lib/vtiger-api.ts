@@ -57,84 +57,120 @@ export function createVtigerAPI(
   accessKey: string,
 ): VtigerClient {
   let sessionName: string | null = null;
+  let accessToken: string | null = null;
+  let refreshToken: string | null = null;
 
   // Ensure server URL ends with /
   if (!serverUrl.endsWith("/")) {
     serverUrl += "/";
   }
 
-  // Base URL for webservice API
-  const baseUrl = `${serverUrl}webservice.php`;
+  // Base URL for new API (api.php instead of webservice.php)
+  const baseUrl = `${serverUrl}api.php`;
 
   /**
-   * Make API request to Vtiger CRM with timeout, retry logic, and abort signal support
-   * CRITICAL: Added abort signal support to allow proper request cancellation
+   * Make API request to Vtiger CRM with timeout, retry logic, token refresh, and abort signal support
+   * CRITICAL: Added abort signal support and token refresh logic
    */
   async function apiRequest(
     operation: string,
     params: any = {},
     method: "get" | "post" = "get",
     retries: number = 3,
-    signal?: AbortSignal,  // Added abort signal parameter
+    signal?: AbortSignal,
   ) {
-    const timeout = 60000; // 60 second timeout per request
-    
+    const timeout = 60000;
+
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         let response;
+        const formData = new URLSearchParams();
+        formData.append("operation", operation);
 
-        if (method === "get") {
-          response = await axios.get(baseUrl, {
-            params: {
-              operation,
-              ...params,
-            },
-            timeout,
-            signal,  // Pass abort signal to axios
-          });
-        } else {
-          // For complex operations like create/update, use POST
-          const formData = new URLSearchParams();
-          formData.append("operation", operation);
-
-          // Add all params to form data
-          Object.keys(params).forEach((key) => {
+        Object.keys(params).forEach((key) => {
+          if (key === "element" && typeof params[key] === "object") {
+            formData.append(key, JSON.stringify(params[key]));
+          } else {
             formData.append(key, params[key]);
-          });
+          }
+        });
 
-          response = await axios.post(baseUrl, formData, {
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
-            timeout,
-            signal,  // Pass abort signal to axios
-          });
+        const headers: any = {
+          "Content-Type": "application/x-www-form-urlencoded",
+        };
+
+        if (accessToken && operation !== "UserLogin" && operation !== "RefreshAccessToken") {
+          headers["Authorization"] = `Bearer ${accessToken}`;
         }
+
+        response = await axios.post(baseUrl, formData, {
+          headers,
+          timeout,
+          signal,
+        });
 
         if (response.data.success === false) {
-          throw new Error(
-            response.data.error?.message || "Unknown Vtiger API error",
-          );
+          const errorMessage = response.data.error?.message || response.data.message || "Unknown Vtiger API error";
+
+          if (errorMessage.includes("Token Expired") && refreshToken && attempt === 1) {
+            console.log("🔄 Token expired, refreshing...");
+            await refreshAccessToken();
+            continue;
+          }
+
+          throw new Error(errorMessage);
         }
 
-        return response.data.result;
+        return response.data.result || response.data;
       } catch (error: any) {
         const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
         const isNetworkError = error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT';
-        
+        const isTokenExpired = error.message?.includes('Token Expired');
+
+        if (isTokenExpired && refreshToken && attempt === 1) {
+          console.log("🔄 Token expired (caught in error), refreshing...");
+          await refreshAccessToken();
+          continue;
+        }
+
         if ((isTimeout || isNetworkError) && attempt < retries) {
           console.warn(`⚠️ Vtiger API ${operation} attempt ${attempt} failed (${isTimeout ? 'timeout' : 'network error'}), retrying... (${retries - attempt} retries left)`);
-          // Exponential backoff: wait 1s, 2s, 4s before retrying
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt - 1) * 1000));
           continue;
         }
-        
+
         console.error(`Vtiger API error (${operation}) after ${attempt} attempt(s):`, error.message || error);
         throw error;
       }
     }
-    
+
     throw new Error(`Failed to complete ${operation} after ${retries} retries`);
+  }
+
+  async function refreshAccessToken() {
+    try {
+      console.log("🔄 Refreshing access token...");
+      const result = await apiRequest(
+        "RefreshAccessToken",
+        {
+          refreshtoken: refreshToken,
+        },
+        "post",
+        1
+      );
+
+      if (result && result.accesstoken) {
+        accessToken = result.accesstoken;
+        console.log("✅ Access token refreshed successfully");
+      } else {
+        throw new Error("Failed to refresh access token");
+      }
+    } catch (error) {
+      console.error("❌ Token refresh failed:", error);
+      accessToken = null;
+      refreshToken = null;
+      throw error;
+    }
   }
 
   return {
@@ -144,45 +180,35 @@ export function createVtigerAPI(
     sessionName,
 
     /**
-     * Login to Vtiger CRM and get session token
+     * Login to Vtiger CRM and get access token
      */
     async login(signal?: AbortSignal) {
       try {
-        // Get challenge token
-        const challengeResult = await apiRequest("getchallenge", {
-          username,
-        }, "get", 3, signal);
-
-        if (!challengeResult || !challengeResult.token) {
-          throw new Error("Failed to get challenge token from Vtiger");
-        }
-
-        const token = challengeResult.token;
-
-        // Try different authentication methods for different Vtiger versions
-        // For open source/self-hosted versions, often MD5 hash is still required
-        const accessKeyHash = await md5Hash(token + accessKey);
-
-        // Perform login with POST method for better security
+        console.log("🔐 Logging into Vtiger CRM with UserLogin operation...");
         const loginResult = await apiRequest(
-          "login",
+          "UserLogin",
           {
             username,
-            accessKey: accessKeyHash,
+            password: accessKey,
           },
           "post",
           3,
           signal,
         );
 
-        if (!loginResult || !loginResult.sessionName) {
-          throw new Error("Failed to obtain session from Vtiger");
+        if (!loginResult || !loginResult.accesstoken) {
+          throw new Error("Failed to obtain access token from Vtiger");
         }
 
-        sessionName = loginResult.sessionName;
-        console.log("Successfully logged into Vtiger CRM");
+        accessToken = loginResult.accesstoken;
+        refreshToken = loginResult.refreshtoken || null;
+        sessionName = accessToken;
+
+        console.log("✅ Successfully logged into Vtiger CRM");
+        console.log(`🔑 Access token: ${accessToken?.substring(0, 20)}...`);
+        console.log(`🔄 Refresh token: ${refreshToken ? refreshToken.substring(0, 20) + '...' : 'Not provided'}`);
       } catch (error) {
-        console.error("Vtiger login error:", error);
+        console.error("❌ Vtiger login error:", error);
         throw error;
       }
     },
@@ -638,158 +664,63 @@ export function createVtigerAPI(
     },
 
     /**
-     * Import contacts from Vtiger CRM
+     * Import contacts from Vtiger CRM using new GetCandidates operation
      */
     async importContacts(lastSyncTime?: string) {
-      if (!sessionName) {
+      if (!accessToken) {
         await this.login();
       }
 
       try {
-        // Determine if this is an incremental sync
         const isIncremental = lastSyncTime && lastSyncTime !== 'null';
         const syncType = isIncremental ? 'INCREMENTAL' : 'FULL';
-        
-        console.log(`🔍 Starting ${syncType} Vtiger contact import with pagination...`);
+
+        console.log(`🔍 Starting ${syncType} Vtiger contact import using GetCandidates...`);
         if (isIncremental) {
           console.log(`📅 Fetching contacts modified since: ${lastSyncTime}`);
         }
-        
-        // Build the WHERE clause for incremental sync
-        let whereClause = '';
-        if (isIncremental) {
-          // Convert lastSyncTime to Vtiger format (YYYY-MM-DD HH:MM:SS)
-          const syncDate = new Date(lastSyncTime);
-          const vtigerTimeFormat = syncDate.toISOString().slice(0, 19).replace('T', ' ');
-          whereClause = ` WHERE modifiedtime > '${vtigerTimeFormat}'`;
-        }
-        
-        // Get the actual total count using COUNT(*) query instead of pagination
-        console.log("📊 Getting accurate total count from Vtiger using COUNT(*) query...");
-        let actualTotalContacts = 0;
-        
-        try {
-          const countQuery = `SELECT COUNT(*) as total FROM Contacts${whereClause};`;
-          console.log(`📊 Executing count query: ${countQuery}`);
-          const countResult = await this.query(countQuery);
-          console.log(`📊 COUNT query raw response:`, JSON.stringify(countResult));
-          
-          if (countResult && countResult.length > 0 && countResult[0].total) {
-            actualTotalContacts = parseInt(countResult[0].total) || 0;
-            console.log(`📊 COUNT(*) result: ${actualTotalContacts} total contacts in Vtiger`);
-          } else {
-            throw new Error("COUNT(*) query returned no results or invalid format");
-          }
-        } catch (error) {
-          console.log("📊 COUNT(*) failed, falling back to pagination counting...", error);
-          // Fallback to pagination counting with smaller batches
-          let countOffset = 0;
-          const countLimit = 100; // Smaller batches for better reliability
-          const maxRecords = 20000; // Increase safety cap to handle all 6900+ records
-          
-          while (countOffset < maxRecords) {
-            try {
-              const countQuery = `SELECT id FROM Contacts${whereClause} LIMIT ${countOffset}, ${countLimit};`;
-              console.log(`📊 Counting batch at offset ${countOffset}...`);
-              const countBatch = await this.query(countQuery);
-              
-              if (!countBatch || countBatch.length === 0) {
-                console.log(`✅ No more records at offset ${countOffset}, total found: ${actualTotalContacts}`);
-                break;
-              }
-              
-              actualTotalContacts += countBatch.length;
-              
-              // Log progress every 1000 records
-              if (actualTotalContacts % 1000 === 0) {
-                console.log(`📊 Counting progress: ${actualTotalContacts} contacts found so far...`);
-              }
-              
-              // If we got fewer records than the limit, we've reached the end
-              if (countBatch.length < countLimit) {
-                console.log(`✅ Reached end of records at offset ${countOffset}, total: ${actualTotalContacts}`);
-                break;
-              }
-              
-              countOffset += countLimit;
-            } catch (batchError) {
-              console.log(`⚠️ Error counting batch at offset ${countOffset}:`, batchError);
-              // Continue to next batch even if one fails
-              countOffset += countLimit;
-            }
-          }
-          console.log(`📊 Manual count complete: ${actualTotalContacts} total contacts`);
-        }
-        
-        // Ensure we have at least 6906 contacts (known minimum)
-        if (actualTotalContacts < 6906) {
-          console.log(`⚠️ Count seems low (${actualTotalContacts}), setting minimum to 6906 known contacts`);
-          actualTotalContacts = 7000; // Use 7000 to have some buffer
-        }
-        
-        const totalContacts = actualTotalContacts;
-        console.log(`📊 ✅ ACTUAL total ${syncType.toLowerCase()} contacts in Vtiger: ${totalContacts}`);
-        
-        // First discover available fields
-        await this.discoverContactFields();
 
         let allContacts: any[] = [];
-        let offset = 0;
-        const limit = 100; // VTiger API limit per request
-        let batchCount = 0;
-        let emptyBatchCount = 0; // Track consecutive empty batches
-        const MAX_EMPTY_BATCHES = 3; // Stop after 3 consecutive empty batches
+        let page = 1;
+        const perPage = 20;
+        let hasMorePages = true;
+        let totalFetched = 0;
 
-        // CRITICAL FIX: Continue fetching until we've tried all possible offsets
-        // VTiger might have gaps in record IDs, so we can't stop at first empty batch
-        const maxOffset = Math.max(totalContacts + 1000, 8000); // Ensure we try at least 8000 offsets
-        while (offset < maxOffset) { // Add buffer to catch all records
-          batchCount++;
-          const progressPercent = totalContacts > 0 ? Math.round((offset / totalContacts) * 100) : 0;
-          console.log(
-            `➡️ Fetching batch ${batchCount}: OFFSET ${offset} LIMIT ${limit} (${progressPercent}% of ${totalContacts})`,
+        while (hasMorePages) {
+          console.log(`📄 Fetching page ${page} (${perPage} per page)...`);
+
+          const result = await apiRequest(
+            "GetCandidates",
+            {
+              element: {
+                per_page: perPage.toString(),
+                page: page.toString(),
+              },
+            },
+            "post"
           );
 
-          // CRITICAL FIX: Use SELECT * to get ALL fields including ALL custom fields
-          // Previous approach of listing specific fields was missing data for many candidates
-          const queryStr = `SELECT * FROM Contacts${whereClause} LIMIT ${offset}, ${limit};`;
-          const contacts = await this.query(queryStr);
-
-          if (!contacts || contacts.length === 0) {
-            emptyBatchCount++;
-            console.log(`⚠️ Empty batch ${emptyBatchCount}/${MAX_EMPTY_BATCHES} at offset ${offset}. Checking for more records...`);
-            
-            // Only stop after multiple consecutive empty batches to handle gaps
-            if (emptyBatchCount >= MAX_EMPTY_BATCHES) {
-              console.log(`✅ All contacts fetched after ${batchCount} batch(es). Total imported: ${allContacts.length}/${totalContacts}`);
-              break;
-            }
-            
-            offset += limit; // Skip to next batch
-            continue;
-          }
-
-          // Reset empty batch counter when we find data
-          emptyBatchCount = 0;
-          allContacts.push(...contacts);
-          offset += limit;
-
-          // Log progress for large imports
-          if (allContacts.length % 1000 === 0) {
-            console.log(`📊 Progress: ${allContacts.length} contacts fetched so far...`);
-          }
-
-          // Stop if we've clearly fetched all contacts
-          if (allContacts.length >= totalContacts && contacts.length < limit) {
-            console.log(`✅ Fetched all ${totalContacts} contacts successfully`);
+          if (!result || !result.data || result.data.length === 0) {
+            console.log(`✅ No more contacts at page ${page}`);
+            hasMorePages = false;
             break;
+          }
+
+          allContacts.push(...result.data);
+          totalFetched += result.data.length;
+
+          console.log(`📊 Fetched ${result.data.length} contacts (total: ${totalFetched})`);
+
+          if (result.data.length < perPage) {
+            console.log(`✅ Last page reached (got ${result.data.length} < ${perPage})`);
+            hasMorePages = false;
+          } else {
+            page++;
           }
         }
 
-        console.log(`🎯 FINAL IMPORT RESULT: ${allContacts.length}/${totalContacts} contacts imported (${Math.round((allContacts.length / totalContacts) * 100)}% coverage)`);
-
-        // CRITICAL DEBUG: Log actual raw API response before processing
-        console.log("🚨 CRITICAL DEBUG - RAW VTIGER API RESPONSE:");
+        console.log(`🎯 FINAL IMPORT RESULT: ${allContacts.length} contacts imported`);
+        console.log("🚨 RAW VTIGER API RESPONSE:");
         console.log("Response structure check:", {
           isArray: Array.isArray(allContacts),
           length: allContacts?.length,
@@ -1026,19 +957,58 @@ export function createVtigerAPI(
     },
 
     /**
-     * Import accounts from Vtiger CRM
+     * Import accounts from Vtiger CRM using new GetAccounts operation
      */
     async importAccounts() {
-      if (!sessionName) {
+      if (!accessToken) {
         await this.login();
       }
 
       try {
-        const accounts = await this.query(
-          "SELECT id, accountname, website, phone, email1, industry FROM Accounts;",
-        );
+        console.log("🏢 Starting Vtiger accounts import using GetAccounts...");
 
-        return accounts.map((account: any) => ({
+        let allAccounts: any[] = [];
+        let page = 1;
+        const perPage = 20;
+        let hasMorePages = true;
+        let totalFetched = 0;
+
+        while (hasMorePages) {
+          console.log(`📄 Fetching accounts page ${page} (${perPage} per page)...`);
+
+          const result = await apiRequest(
+            "GetAccounts",
+            {
+              element: {
+                per_page: perPage.toString(),
+                page: page.toString(),
+              },
+            },
+            "post"
+          );
+
+          if (!result || !result.data || result.data.length === 0) {
+            console.log(`✅ No more accounts at page ${page}`);
+            hasMorePages = false;
+            break;
+          }
+
+          allAccounts.push(...result.data);
+          totalFetched += result.data.length;
+
+          console.log(`📊 Fetched ${result.data.length} accounts (total: ${totalFetched})`);
+
+          if (result.data.length < perPage) {
+            console.log(`✅ Last page reached (got ${result.data.length} < ${perPage})`);
+            hasMorePages = false;
+          } else {
+            page++;
+          }
+        }
+
+        console.log(`🎯 FINAL IMPORT RESULT: ${allAccounts.length} accounts imported`);
+
+        return allAccounts.map((account: any) => ({
           vtigerId: account.id,
           companyName: account.accountname,
           website: account.website,
@@ -1048,7 +1018,7 @@ export function createVtigerAPI(
           source: "Vtiger CRM",
         }));
       } catch (error) {
-        console.error("Vtiger import accounts error:", error);
+        console.error("❌ Vtiger import accounts error:", error);
         throw error;
       }
     },
