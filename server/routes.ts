@@ -53,6 +53,11 @@ const placementService = new PlacementService(storage);
 // Removed unused vacancyUpload - now handled by vacancyParserRouter
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Redirect root to /rportal
+  app.get('/', (req, res) => {
+    res.redirect('/rportal/');
+  });
+
   // Debug auth endpoint to confirm authentication is working
   app.get('/api/auth/debug', authenticateToken, (req, res) => {
     res.json({
@@ -1393,9 +1398,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
 
-  
+
   // Authentication routes - Invite-based authentication system
+  // Mount on both paths to support different reverse proxy configurations
   app.use("/api/auth", inviteAuthRouter);
+  app.use("/rportal/api/auth", inviteAuthRouter);
   
   // Test email endpoint for debugging SMTP issues
   app.post("/api/test-email", async (req, res) => {
@@ -1434,9 +1441,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Vtiger CRM integration - Using environment variables
   app.use("/api/vtiger", vtigerRouter);
+  app.use("/rportal/api/vtiger", vtigerRouter);
   
   // Vtiger CRM bidirectional synchronization
   app.use("/api/sync/vtiger", vtigerSyncRouter);
+  app.use("/rportal/api/sync/vtiger", vtigerSyncRouter);
 
   // Sync metadata endpoints
   app.get("/api/sync-metadata/latest", authenticateToken, async (req, res) => {
@@ -1555,9 +1564,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // CV parsing service using OpenAI
   app.use("/api/cv-parser", cvParserRouter);
+  app.use("/rportal/api/cv-parser", cvParserRouter);
   
   // Vacancy file processing API
   app.use("/api", vacancyParserRouter);
+  app.use("/rportal/api", vacancyParserRouter);
   
   app.post("/api/vtiger/query", (req, res) => {
     const { module, query } = req.body;
