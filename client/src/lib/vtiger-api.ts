@@ -498,17 +498,23 @@ export function createVtigerAPI(
 
     /**
      * Sync candidates with Vtiger CRM (as Contacts)
+     * @param candidates - Array of candidates to sync
+     * @param maxBatchSize - Maximum number of candidates to sync (default 20000)
      */
-
-    async syncCandidates(candidates: any[]) {
-      if (!sessionName) {
+    async syncCandidates(candidates: any[], maxBatchSize: number = 20000) {
+      if (!accessToken) {
         await this.login();
       }
 
       try {
         const results = [];
+        const candidatesToSync = candidates.slice(0, maxBatchSize);
 
-        for (const candidate of candidates) {
+        if (candidates.length > maxBatchSize) {
+          console.log(`⚠️ Limiting sync to ${maxBatchSize} candidates out of ${candidates.length} total`);
+        }
+
+        for (const candidate of candidatesToSync) {
           // Validate session before each operation
           if (!sessionName) {
             throw new Error('Session token is missing for candidate: ' + candidate.email);
@@ -563,16 +569,23 @@ export function createVtigerAPI(
 
     /**
      * Sync clients with Vtiger CRM (as Accounts)
+     * @param clients - Array of clients to sync
+     * @param maxBatchSize - Maximum number of clients to sync (default 20000)
      */
-    async syncClients(clients: any[]) {
-      if (!sessionName) {
+    async syncClients(clients: any[], maxBatchSize: number = 20000) {
+      if (!accessToken) {
         await this.login();
       }
 
       try {
         const results = [];
+        const clientsToSync = clients.slice(0, maxBatchSize);
 
-        for (const client of clients) {
+        if (clients.length > maxBatchSize) {
+          console.log(`⚠️ Limiting sync to ${maxBatchSize} clients out of ${clients.length} total`);
+        }
+
+        for (const client of clientsToSync) {
           // Check if account exists by name
           const existingAccounts = await this.query(
             `SELECT id FROM Accounts WHERE accountname='${client.companyName}';`,
@@ -665,8 +678,10 @@ export function createVtigerAPI(
 
     /**
      * Import contacts from Vtiger CRM using new GetCandidates operation
+     * @param lastSyncTime - Optional timestamp for incremental sync
+     * @param maxRecords - Maximum number of records to fetch (default 20000)
      */
-    async importContacts(lastSyncTime?: string) {
+    async importContacts(lastSyncTime?: string, maxRecords: number = 20000) {
       if (!accessToken) {
         await this.login();
       }
@@ -676,6 +691,7 @@ export function createVtigerAPI(
         const syncType = isIncremental ? 'INCREMENTAL' : 'FULL';
 
         console.log(`🔍 Starting ${syncType} Vtiger contact import using GetCandidates...`);
+        console.log(`⚠️ Maximum records limit: ${maxRecords}`);
         if (isIncremental) {
           console.log(`📅 Fetching contacts modified since: ${lastSyncTime}`);
         }
@@ -686,8 +702,8 @@ export function createVtigerAPI(
         let hasMorePages = true;
         let totalFetched = 0;
 
-        while (hasMorePages) {
-          console.log(`📄 Fetching page ${page} (${perPage} per page)...`);
+        while (hasMorePages && totalFetched < maxRecords) {
+          console.log(`📄 Fetching page ${page} (${perPage} per page) - ${totalFetched}/${maxRecords} fetched...`);
 
           const result = await apiRequest(
             "GetCandidates",
@@ -710,6 +726,13 @@ export function createVtigerAPI(
           totalFetched += result.data.length;
 
           console.log(`📊 Fetched ${result.data.length} contacts (total: ${totalFetched})`);
+
+          // Check if we've reached the limit
+          if (totalFetched >= maxRecords) {
+            console.log(`⚠️ Reached maximum record limit of ${maxRecords}`);
+            hasMorePages = false;
+            break;
+          }
 
           if (result.data.length < perPage) {
             console.log(`✅ Last page reached (got ${result.data.length} < ${perPage})`);
@@ -958,14 +981,16 @@ export function createVtigerAPI(
 
     /**
      * Import accounts from Vtiger CRM using new GetAccounts operation
+     * @param maxRecords - Maximum number of records to fetch (default 20000)
      */
-    async importAccounts() {
+    async importAccounts(maxRecords: number = 20000) {
       if (!accessToken) {
         await this.login();
       }
 
       try {
         console.log("🏢 Starting Vtiger accounts import using GetAccounts...");
+        console.log(`⚠️ Maximum records limit: ${maxRecords}`);
 
         let allAccounts: any[] = [];
         let page = 1;
@@ -973,8 +998,8 @@ export function createVtigerAPI(
         let hasMorePages = true;
         let totalFetched = 0;
 
-        while (hasMorePages) {
-          console.log(`📄 Fetching accounts page ${page} (${perPage} per page)...`);
+        while (hasMorePages && totalFetched < maxRecords) {
+          console.log(`📄 Fetching accounts page ${page} (${perPage} per page) - ${totalFetched}/${maxRecords} fetched...`);
 
           const result = await apiRequest(
             "GetAccounts",
@@ -997,6 +1022,13 @@ export function createVtigerAPI(
           totalFetched += result.data.length;
 
           console.log(`📊 Fetched ${result.data.length} accounts (total: ${totalFetched})`);
+
+          // Check if we've reached the limit
+          if (totalFetched >= maxRecords) {
+            console.log(`⚠️ Reached maximum record limit of ${maxRecords}`);
+            hasMorePages = false;
+            break;
+          }
 
           if (result.data.length < perPage) {
             console.log(`✅ Last page reached (got ${result.data.length} < ${perPage})`);
