@@ -9,7 +9,9 @@ import pdf2pic from "pdf2pic";
 import mammoth from "mammoth";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 // Configure multer for CV file uploads
 const storage = multer.diskStorage({
@@ -53,8 +55,12 @@ export const cvParserRouter = Router();
  */
 async function extractTextFromFile(filePath: string, mimeType: string): Promise<string> {
   try {
+    if (!openai) {
+      throw new Error("OpenAI API key not configured. CV parsing is unavailable.");
+    }
+
     console.log(`Extracting text from: ${filePath}, MIME type: ${mimeType}`);
-    
+
     // File size check (5MB limit)
     const stats = fs.statSync(filePath);
     const maxSize = 5 * 1024 * 1024; // 5MB in bytes

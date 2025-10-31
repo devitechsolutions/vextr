@@ -1673,5 +1673,17 @@ export class VtigerStorage extends DatabaseStorage {
   }
 }
 
-// Create and export singleton instance
-export const vtigerStorage = new VtigerStorage();
+// Create and export singleton instance - only if credentials are available
+let vtigerStorageInstance: VtigerStorage | null = null;
+
+export const vtigerStorage = (() => {
+  if (!hasVtigerCredentials()) {
+    console.warn('Vtiger credentials not configured. Vtiger features will be unavailable.');
+    return null as any; // Return null but typed as VtigerStorage for compatibility
+  }
+
+  if (!vtigerStorageInstance) {
+    vtigerStorageInstance = new VtigerStorage();
+  }
+  return vtigerStorageInstance;
+})();

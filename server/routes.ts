@@ -40,10 +40,12 @@ import { aiClientEnhancer } from "./services/ai-client-enhancer";
 import { PlacementService } from "./services/placement-service";
 import { priorityEngine } from "./services/priority-engine";
 
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY,
-  timeout: 30000 // 30 second timeout to prevent hanging requests
-});
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      timeout: 30000 // 30 second timeout to prevent hanging requests
+    })
+  : null;
 
 // Initialize placement service
 const placementService = new PlacementService(storage);
@@ -1749,10 +1751,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { default: OpenAI } = await import('openai');
-      const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY,
-  timeout: 30000 // 30 second timeout to prevent hanging requests
-});
+      const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      timeout: 30000 // 30 second timeout to prevent hanging requests
+    })
+  : null;
 
       const prompt = `You are an expert recruiter creating a comprehensive job vacancy for the position "${title}" at "${clientName}". 
 

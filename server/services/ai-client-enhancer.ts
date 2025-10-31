@@ -1,9 +1,9 @@
 import OpenAI from "openai";
 import fetch from "node-fetch";
 
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY 
-});
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 export interface ClientEnhancementData {
   industry?: string;
@@ -31,8 +31,16 @@ class AIClientEnhancerService {
 
   async enhanceClientData(clientName: string, existingWebsite?: string): Promise<ClientEnhancementData> {
     try {
+      if (!openai) {
+        console.warn('OpenAI API key not configured. Client enhancement is unavailable.');
+        return {
+          confidence: 0,
+          enhancedFields: []
+        };
+      }
+
       console.log(`🔍 Enhancing client data for: ${clientName}`);
-      
+
       // First, try to enhance with AI
       const enhancedData = await this.getAIEnhancement(clientName, existingWebsite);
       

@@ -2,15 +2,15 @@ import { ConfidentialClientApplication } from '@azure/msal-node';
 import axios from 'axios';
 
 // Azure AD configuration from your app registration
-const clientConfig = {
+const clientConfig = process.env.AZURE_CLIENT_SECRET ? {
   auth: {
     clientId: '9bce1119-d4af-4392-89e9-895e205a934f',
-    clientSecret: process.env.AZURE_CLIENT_SECRET!,
+    clientSecret: process.env.AZURE_CLIENT_SECRET,
     authority: 'https://login.microsoftonline.com/9179a0c5-4c5d-491e-a603-822433d32de1'
   }
-};
+} : null;
 
-const cca = new ConfidentialClientApplication(clientConfig);
+const cca = clientConfig ? new ConfidentialClientApplication(clientConfig) : null;
 
 interface GraphEmailOptions {
   to: string;
@@ -21,6 +21,11 @@ interface GraphEmailOptions {
 
 export async function sendEmailViaGraph(options: GraphEmailOptions): Promise<boolean> {
   try {
+    if (!cca) {
+      console.warn('Azure credentials not configured. Email sending via Graph API is unavailable.');
+      return false;
+    }
+
     console.log('=== MICROSOFT GRAPH API EMAIL DELIVERY ===');
     console.log('Sending email via Microsoft Graph API to:', options.to);
     console.log('Subject:', options.subject);
