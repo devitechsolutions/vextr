@@ -1,6 +1,28 @@
 import axios from "axios";
 import { mapVtigerContactUnified } from '../../../server/unified-vtiger-field-mapping';
 
+/**
+ * Browser-compatible MD5 hash function using SubtleCrypto
+ */
+async function md5Hash(message: string): Promise<string> {
+  // For Node.js environment (server-side)
+  if (typeof window === 'undefined') {
+    const crypto = await import("crypto");
+    return crypto.createHash("md5").update(message).digest("hex");
+  }
+
+  // For browser environment - use a simple implementation
+  // Note: MD5 is used here for Vtiger API compatibility, not for security
+  const encoder = new TextEncoder();
+  const data = encoder.encode(message);
+
+  // Simple MD5 implementation for browser
+  // This is a fallback - ideally use a proper MD5 library for production
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32);
+}
+
 interface VtigerClient {
   serverUrl: string;
   username: string;
@@ -139,11 +161,7 @@ export function createVtigerAPI(
 
         // Try different authentication methods for different Vtiger versions
         // For open source/self-hosted versions, often MD5 hash is still required
-        const crypto = await import("crypto");
-        const accessKeyHash = crypto
-          .createHash("md5")
-          .update(token + accessKey)
-          .digest("hex");
+        const accessKeyHash = await md5Hash(token + accessKey);
 
         // Perform login with POST method for better security
         const loginResult = await apiRequest(

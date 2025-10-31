@@ -10,7 +10,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
-import dcPeopleLogo from "@assets/image_1748860853811.png";
 import { apiRequest } from "@/lib/queryClient";
 
 const forgotPasswordSchema = z.object({
@@ -64,13 +63,6 @@ export default function ForgotPasswordPage() {
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1 text-center">
             <div className="flex justify-center mb-4">
-              <img 
-                src={dcPeopleLogo} 
-                alt="DC People" 
-                className="h-12 w-auto"
-              />
-            </div>
-            <div className="flex justify-center mb-4">
               <CheckCircle className="h-16 w-16 text-green-500" />
             </div>
             <CardTitle className="text-2xl font-bold">Check your email</CardTitle>
@@ -115,13 +107,6 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <img 
-              src={dcPeopleLogo} 
-              alt="DC People" 
-              className="h-12 w-auto"
-            />
-          </div>
           <CardTitle className="text-2xl font-bold">Forgot your password?</CardTitle>
           <CardDescription>
             Enter your email address and we'll send you a reset link

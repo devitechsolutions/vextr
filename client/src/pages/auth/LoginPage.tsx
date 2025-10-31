@@ -12,7 +12,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-import dcPeopleLogo from "@assets/image_1748860853811.png";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -90,13 +89,6 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <img 
-              src={dcPeopleLogo} 
-              alt="DC People" 
-              className="h-12 w-auto"
-            />
-          </div>
           <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
           <CardDescription>
             Sign in to your DC People account

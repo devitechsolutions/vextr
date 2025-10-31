@@ -21,7 +21,6 @@ import { useAuth } from "@/context/AuthContext";
 import { queryClient } from "@/lib/queryClient";
 import { PDFDocument } from "@/lib/pdf-renderer";
 import { UploadCloud, FileUp, Download, Eye, Layout, FileText, Palette, MailIcon, Phone, Loader2, ChevronLeft, ChevronRight, Plus, X, Edit } from "lucide-react";
-import dcPeopleLogo from "@assets/DC People Image_1753449062638.png";
 
 export default function CVFormatterPage() {
   const { toast } = useToast();
@@ -1051,7 +1050,7 @@ export default function CVFormatterPage() {
           {includeRecruiterInfo && (
             <div className="mt-6 pt-3 border-t border-gray-200 text-xs text-gray-500">
               <div className="flex items-center gap-2 mb-2">
-                <img src={dcPeopleLogo} alt="DC People" className="h-4 w-4 object-contain" />
+                <span className="text-xs font-semibold">DC People</span>
                 <span className="font-medium text-xs">DC People</span>
               </div>
               Represented by: {recruiterName} | {recruiterCompany}

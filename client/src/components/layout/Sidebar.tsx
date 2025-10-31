@@ -11,7 +11,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import dcPeopleLogo from "@assets/image_1748860853811.png";
 import {
   BarChart3,
   Users,
@@ -168,11 +167,7 @@ export default function Sidebar() {
       {/* Logo section at bottom */}
       <div className="p-4">
         <div className="flex items-center justify-center mb-4">
-          <img 
-            src={dcPeopleLogo} 
-            alt="DC People" 
-            className="h-8 w-auto mx-auto"
-          />
+          <span className="text-xl font-bold text-neutral-strong dark:text-white">DC People</span>
         </div>
       </div>
       
