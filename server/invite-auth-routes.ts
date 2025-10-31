@@ -31,13 +31,18 @@ inviteAuthRouter.post("/init-admin", async (req: Request, res: Response) => {
  */
 inviteAuthRouter.post("/login", async (req: Request, res: Response) => {
   try {
+    console.log("Login attempt - Request body:", JSON.stringify(req.body));
     const validatedData = loginSchema.parse(req.body);
+    console.log("Login validation passed for email:", validatedData.email);
+
     const result = await InviteAuthService.login(
-      validatedData.email, 
-      validatedData.password, 
+      validatedData.email,
+      validatedData.password,
       validatedData.rememberMe
     );
-    
+
+    console.log("Login result:", { success: result.success, message: result.message });
+
     if (result.success && result.token) {
       res.cookie("token", result.token, {
         httpOnly: true,
@@ -46,10 +51,14 @@ inviteAuthRouter.post("/login", async (req: Request, res: Response) => {
         maxAge: validatedData.rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000,
       });
     }
-    
+
     res.json(result);
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("Login error (full):", error);
+    if (error instanceof Error) {
+      console.error("Error name:", error.name);
+      console.error("Error message:", error.message);
+    }
     res.status(400).json({ success: false, message: "Invalid request data" });
   }
 });
