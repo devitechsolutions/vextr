@@ -1,5 +1,24 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// Get base path from Vite's import.meta.env.BASE_URL
+const BASE_PATH = import.meta.env.BASE_URL || '/';
+
+// Helper to construct full URL with base path
+function getFullUrl(url: string): string {
+  // If URL is already absolute, return as-is
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+
+  // Remove leading slash from url if present
+  const cleanUrl = url.startsWith('/') ? url.slice(1) : url;
+
+  // Ensure base path ends with slash
+  const cleanBase = BASE_PATH.endsWith('/') ? BASE_PATH : `${BASE_PATH}/`;
+
+  return `${cleanBase}${cleanUrl}`;
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -20,14 +39,14 @@ export async function apiRequest(
   // 2. apiRequest(method, url, data) - convenience 3-param
   if (typeof urlOrOptions === "string") {
     // 3-param pattern: apiRequest("POST", "/api/endpoint", {data})
-    url = urlOrOptions;
+    url = getFullUrl(urlOrOptions);
     options = {
       method: methodOrUrl,
       body: bodyData ? JSON.stringify(bodyData) : undefined,
     };
   } else {
     // 2-param pattern: apiRequest("/api/endpoint", {method: "POST", body: ...})
-    url = methodOrUrl;
+    url = getFullUrl(methodOrUrl);
     options = urlOrOptions || {};
   }
 
@@ -41,12 +60,12 @@ export async function apiRequest(
   });
 
   await throwIfResNotOk(res);
-  
+
   // Don't try to parse JSON for empty responses (like DELETE 204)
   if (res.status === 204 || res.headers.get("content-length") === "0") {
     return null;
   }
-  
+
   return await res.json();
 }
 
@@ -56,7 +75,8 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    const url = getFullUrl(queryKey[0] as string);
+    const res = await fetch(url, {
       credentials: "include",
     });
 
