@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Router as WouterRouter } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -25,9 +25,12 @@ import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
 import ChangePasswordPage from "@/pages/auth/ChangePasswordPage";
 import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
 
+const BASE_PATH = "/rportal";
+
 function Router() {
   return (
-    <Switch>
+    <WouterRouter base={BASE_PATH}>
+      <Switch>
       {/* Public routes */}
       <Route path="/login">
         <PublicRoute>
@@ -140,10 +143,11 @@ function Router() {
           </Layout>
         </ProtectedRoute>
       </Route>
-      
+
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>
+    </WouterRouter>
   );
 }
 
