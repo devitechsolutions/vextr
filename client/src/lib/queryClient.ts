@@ -1,23 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-
-// Get base path from Vite's import.meta.env.BASE_URL
-const BASE_PATH = import.meta.env.BASE_URL || '/';
-
-// Helper to construct full URL with base path
-function getFullUrl(url: string): string {
-  // If URL is already absolute, return as-is
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
-  }
-
-  // Remove leading slash from url if present
-  const cleanUrl = url.startsWith('/') ? url.slice(1) : url;
-
-  // Ensure base path ends with slash
-  const cleanBase = BASE_PATH.endsWith('/') ? BASE_PATH : `${BASE_PATH}/`;
-
-  return `${cleanBase}${cleanUrl}`;
-}
+import { getApiUrl } from './api-config';
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -39,14 +21,14 @@ export async function apiRequest(
   // 2. apiRequest(method, url, data) - convenience 3-param
   if (typeof urlOrOptions === "string") {
     // 3-param pattern: apiRequest("POST", "/api/endpoint", {data})
-    url = getFullUrl(urlOrOptions);
+    url = getApiUrl(urlOrOptions);
     options = {
       method: methodOrUrl,
       body: bodyData ? JSON.stringify(bodyData) : undefined,
     };
   } else {
     // 2-param pattern: apiRequest("/api/endpoint", {method: "POST", body: ...})
-    url = getFullUrl(methodOrUrl);
+    url = getApiUrl(methodOrUrl);
     options = urlOrOptions || {};
   }
 
@@ -75,7 +57,7 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const url = getFullUrl(queryKey[0] as string);
+    const url = getApiUrl(queryKey[0] as string);
     const res = await fetch(url, {
       credentials: "include",
     });

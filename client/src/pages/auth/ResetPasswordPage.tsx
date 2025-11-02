@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
+import { getApiUrl } from "@/lib/api-config";
 
 const resetPasswordSchema = z.object({
   newPassword: z.string().min(8, "Password must be at least 8 characters")
@@ -75,7 +76,7 @@ export default function ResetPasswordPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch("/api/auth/reset-password", {
+      const response = await fetch(getApiUrl("/api/auth/reset-password"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

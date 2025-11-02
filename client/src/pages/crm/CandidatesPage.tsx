@@ -26,6 +26,7 @@ import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import type { UploadResult } from "@uppy/core";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { getApiUrl } from "@/lib/api-config";
 
 // Define form input type for easier form handling
 type CandidateInput = Omit<InsertCandidate, "skills"> & { 
@@ -312,7 +313,7 @@ const SyncHistoryViewer = () => {
   const { data: syncHistory, isLoading } = useQuery({
     queryKey: ["/api/sync-metadata"],
     queryFn: async () => {
-      const response = await fetch("/api/sync-metadata?limit=20");
+      const response = await fetch(getApiUrl("/api/sync-metadata?limit=20"));
       if (!response.ok) throw new Error("Failed to fetch sync history");
       return response.json();
     },
@@ -720,7 +721,7 @@ export default function CandidatesPage() {
       },
       onSuccess: async (updated) => {
         // Sync to Vtiger
-        await fetch("/api/sync/vtiger/update-candidate", {
+        await fetch(getApiUrl("/api/sync/vtiger/update-candidate"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ candidateId: updated.id }),
@@ -1194,7 +1195,7 @@ export default function CandidatesPage() {
                             e.stopPropagation();
                             try {
                               // Use batch endpoint for instant removal
-                              const response = await fetch('/api/batch/vacancy-assignments', {
+                              const response = await fetch(getApiUrl('/api/batch/vacancy-assignments'), {
                                 method: 'DELETE',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ 
@@ -1239,7 +1240,7 @@ export default function CandidatesPage() {
                       e.stopPropagation();
                       try {
                         // Use batch endpoint for instant assignment
-                        const response = await fetch('/api/batch/vacancy-assignments', {
+                        const response = await fetch(getApiUrl('/api/batch/vacancy-assignments'), {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ 
@@ -2579,7 +2580,7 @@ export default function CandidatesPage() {
               // If sync is running, this cancels it. Otherwise, starts a new sync
               if (syncMetadata?.status === "running") {
                 try {
-                  const response = await fetch("/api/candidates/cancel-sync", { 
+                  const response = await fetch(getApiUrl("/api/candidates/cancel-sync"), { 
                     method: "POST"
                   });
                   const result = await response.json();
@@ -2597,7 +2598,7 @@ export default function CandidatesPage() {
               } else {
                 try {
                   console.log('🔄 Sync button clicked - starting VTiger sync...');
-                  const response = await fetch("/api/candidates/force-sync", { method: "POST" });
+                  const response = await fetch(getApiUrl("/api/candidates/force-sync"), { method: "POST" });
                   const result = await response.json();
                   console.log('🔄 Sync response:', result);
                   if (result.success) {

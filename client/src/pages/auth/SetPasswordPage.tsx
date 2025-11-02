@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
+import { getApiUrl } from "@/lib/api-config";
 
 const setPasswordSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters long")
@@ -94,7 +95,7 @@ export default function SetPasswordPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch("/api/auth/set-password", {
+      const response = await fetch(getApiUrl("/api/auth/set-password"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

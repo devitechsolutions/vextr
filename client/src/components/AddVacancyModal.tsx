@@ -45,6 +45,7 @@ import { Badge } from "@/components/ui/badge";
 import { X, Sparkles, Upload, Globe, Edit, Users, Trash2, RotateCcw, ChevronsUpDown, Check } from "lucide-react";
 import { insertVacancySchema, Client, User, Vacancy } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { getApiUrl } from "@/lib/api-config";
 
 // Auto-growing textarea component
 interface AutoGrowTextareaProps {
@@ -228,7 +229,7 @@ export function AddVacancyModal({ open, onOpenChange, editVacancy, viewVacancy, 
 
   const createVacancyMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch("/api/vacancies", {
+      const response = await fetch(getApiUrl("/api/vacancies"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -300,7 +301,7 @@ export function AddVacancyModal({ open, onOpenChange, editVacancy, viewVacancy, 
 
   const fillWithAiMutation = useMutation({
     mutationFn: async ({ title, clientName }: { title: string, clientName: string }) => {
-      const response = await fetch("/api/generate-vacancy-fields", {
+      const response = await fetch(getApiUrl("/api/generate-vacancy-fields"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -350,7 +351,7 @@ export function AddVacancyModal({ open, onOpenChange, editVacancy, viewVacancy, 
       const formData = new FormData();
       formData.append("file", file);
       
-      const response = await fetch("/api/extract-vacancy-from-file", {
+      const response = await fetch(getApiUrl("/api/extract-vacancy-from-file"), {
         method: "POST",
         body: formData,
       });
@@ -404,7 +405,7 @@ export function AddVacancyModal({ open, onOpenChange, editVacancy, viewVacancy, 
 
   const scrapeUrlMutation = useMutation({
     mutationFn: async (url: string) => {
-      const response = await fetch("/api/scrape-vacancy-from-url", {
+      const response = await fetch(getApiUrl("/api/scrape-vacancy-from-url"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -535,7 +536,7 @@ export function AddVacancyModal({ open, onOpenChange, editVacancy, viewVacancy, 
   // Create enhanced client with extracted info if available
   const createEnhancedClientMutation = useMutation({
     mutationFn: async ({ clientName, extractedCompanyInfo }: { clientName: string, extractedCompanyInfo?: any }) => {
-      const response = await fetch("/api/create-client-with-info", {
+      const response = await fetch(getApiUrl("/api/create-client-with-info"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

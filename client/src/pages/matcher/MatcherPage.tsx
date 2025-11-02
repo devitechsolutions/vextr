@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearch, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { getApiUrl } from "@/lib/api-config";
 import { 
   Card, 
   CardContent, 
@@ -180,7 +181,7 @@ export default function MatcherPage() {
     mutationFn: async ({ candidateId, status }: { candidateId: number; status: string }) => {
       if (!selectedVacancy) throw new Error("No vacancy selected");
       
-      const response = await fetch("/api/candidate-statuses", {
+      const response = await fetch(getApiUrl("/api/candidate-statuses"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
