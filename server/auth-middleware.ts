@@ -46,7 +46,9 @@ export const authenticateToken = async (
       console.log(`[AUTH] Token not found for ${req.method} ${req.path}`, {
         hasCookies: !!req.cookies,
         cookieKeys: req.cookies ? Object.keys(req.cookies) : [],
-        hasAuthHeader: !!authHeader
+        hasAuthHeader: !!authHeader,
+        authHeaderValue: authHeader ? authHeader.substring(0, 20) + '...' : 'none',
+        allHeaders: Object.keys(req.headers)
       });
       res.status(401).json({
         success: false,
