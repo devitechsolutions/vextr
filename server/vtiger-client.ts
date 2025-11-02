@@ -29,16 +29,16 @@ interface VtigerClient {
 }
 
 /**
- * Creates a Vtiger API client
- * @param serverUrl Vtiger CRM server URL
- * @param username Vtiger username
- * @param accessKey Vtiger access key
+ * Creates a Vtiger API client with hardcoded credentials
+ * @param serverUrl Vtiger CRM server URL (optional, uses default if not provided)
+ * @param username Vtiger username (optional, uses hardcoded default)
+ * @param accessKey Vtiger access key (optional, uses hardcoded default)
  * @returns VtigerClient instance
  */
 export function createVtigerAPI(
-  serverUrl: string,
-  username: string,
-  accessKey: string,
+  serverUrl: string = "https://vextr.od2.vtiger.com/",
+  username: string = "vextr",
+  accessKey: string = "7dHeR4mxsnyqoj59o2emj48DCSvgvV8M",
 ): VtigerClient {
   let sessionName: string | null = null;
   let accessToken: string | null = null;
