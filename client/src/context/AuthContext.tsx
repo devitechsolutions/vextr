@@ -75,8 +75,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.success) {
         // Store token in localStorage for cross-domain auth
         if (response.token) {
-          localStorage.setItem('auth_token', response.token);
-          console.log('[AUTH] Token stored in localStorage');
+          try {
+            localStorage.setItem('auth_token', response.token);
+            const stored = localStorage.getItem('auth_token');
+            console.log('[AUTH] Token storage attempt:', {
+              tokenReceived: response.token.substring(0, 20) + '...',
+              storedSuccessfully: !!stored,
+              storedMatches: stored === response.token
+            });
+          } catch (err) {
+            console.error('[AUTH] Failed to store token in localStorage:', err);
+          }
         } else {
           console.warn('[AUTH] No token in response!');
         }
