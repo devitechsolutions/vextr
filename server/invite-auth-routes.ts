@@ -47,7 +47,8 @@ inviteAuthRouter.post("/login", async (req: Request, res: Response) => {
       res.cookie("token", result.token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+        path: "/",
         maxAge: validatedData.rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000,
       });
     }
@@ -67,7 +68,7 @@ inviteAuthRouter.post("/login", async (req: Request, res: Response) => {
  * Logout user
  */
 inviteAuthRouter.post("/logout", (req: Request, res: Response) => {
-  res.clearCookie("token");
+  res.clearCookie("token", { path: "/" });
   res.json({ success: true, message: "Logged out successfully" });
 });
 
@@ -97,7 +98,8 @@ inviteAuthRouter.post("/set-password", async (req: Request, res: Response) => {
       res.cookie("token", result.token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+        path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
     }

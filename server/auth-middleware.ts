@@ -43,9 +43,14 @@ export const authenticateToken = async (
     }
 
     if (!token) {
-      res.status(401).json({ 
-        success: false, 
-        message: "Access token required" 
+      console.log(`[AUTH] Token not found for ${req.method} ${req.path}`, {
+        hasCookies: !!req.cookies,
+        cookieKeys: req.cookies ? Object.keys(req.cookies) : [],
+        hasAuthHeader: !!authHeader
+      });
+      res.status(401).json({
+        success: false,
+        message: "Access token required"
       });
       return;
     }
