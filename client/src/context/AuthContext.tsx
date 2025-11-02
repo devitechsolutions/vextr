@@ -65,10 +65,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ email, password, rememberMe }),
       });
 
+      console.log('[AUTH] Login response:', {
+        success: response.success,
+        hasToken: !!response.token,
+        tokenLength: response.token?.length,
+        hasUser: !!response.user
+      });
+
       if (response.success) {
         // Store token in localStorage for cross-domain auth
         if (response.token) {
           localStorage.setItem('auth_token', response.token);
+          console.log('[AUTH] Token stored in localStorage');
+        } else {
+          console.warn('[AUTH] No token in response!');
         }
         setUser(response.user);
         return {
@@ -79,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, message: response.message };
       }
     } catch (error) {
+      console.error('[AUTH] Login error:', error);
       return { success: false, message: "Login failed" };
     }
   };

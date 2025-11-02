@@ -41,7 +41,12 @@ inviteAuthRouter.post("/login", async (req: Request, res: Response) => {
       validatedData.rememberMe
     );
 
-    console.log("Login result:", { success: result.success, message: result.message });
+    console.log("Login result:", {
+      success: result.success,
+      message: result.message,
+      hasToken: !!result.token,
+      tokenLength: result.token?.length
+    });
 
     if (result.success && result.token) {
       res.cookie("token", result.token, {
@@ -51,6 +56,7 @@ inviteAuthRouter.post("/login", async (req: Request, res: Response) => {
         path: "/",
         maxAge: validatedData.rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000,
       });
+      console.log("Token sent in response body and cookie");
     }
 
     res.json(result);
