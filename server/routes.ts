@@ -1438,11 +1438,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Vtiger CRM integration - Using environment variables
-  app.use("/api/vtiger", vtigerRouter);
-  
-  // Vtiger CRM bidirectional synchronization
-  app.use("/api/sync/vtiger", vtigerSyncRouter);
+  // Vtiger CRM integration - Using environment variables (protected)
+  app.use("/api/vtiger", optionalAuthentication, vtigerRouter);
+
+  // Vtiger CRM bidirectional synchronization (protected)
+  app.use("/api/sync/vtiger", optionalAuthentication, vtigerSyncRouter);
 
   // Sync metadata endpoints
   app.get("/api/sync-metadata/latest", authenticateToken, async (req, res) => {
