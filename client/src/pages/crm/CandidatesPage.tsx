@@ -208,16 +208,6 @@ const CandidateNotesList: React.FC<CandidateNotesListProps> = ({
     notes
   });
 
-  // Force manual fetch to test
-  React.useEffect(() => {
-    console.log(`🚀 Manual fetch attempt for candidate ${candidateId}`);
-    fetch(`/api/candidates/${candidateId}/notes`, {
-      credentials: 'include'
-    })
-    .then(res => res.json())
-    .then(data => console.log(`✅ Manual fetch result for ${candidateId}:`, data))
-    .catch(err => console.log(`❌ Manual fetch error for ${candidateId}:`, err));
-  }, [candidateId]);
 
   if (isLoading) {
     return <div className="text-sm text-gray-500">Loading notes...</div>;
