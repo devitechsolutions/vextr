@@ -44,12 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setUser(null);
         // Clear any invalid tokens
+        localStorage.removeItem('auth_token');
         document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       }
     } catch (error) {
       console.error("Failed to refresh user:", error);
       setUser(null);
       // Clear any invalid tokens
+      localStorage.removeItem('auth_token');
       document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     } finally {
       setIsLoading(false);
@@ -64,10 +66,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (response.success) {
+        // Store token in localStorage for cross-domain auth
+        if (response.token) {
+          localStorage.setItem('auth_token', response.token);
+        }
         setUser(response.user);
-        return { 
-          success: true, 
-          mustChangePassword: response.user?.mustChangePassword || false 
+        return {
+          success: true,
+          mustChangePassword: response.user?.mustChangePassword || false
         };
       } else {
         return { success: false, message: response.message };
@@ -104,6 +110,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (response.success) {
+        // Store token in localStorage for cross-domain auth
+        if (response.token) {
+          localStorage.setItem('auth_token', response.token);
+        }
         setUser(response.user);
         return { success: true };
       } else {
@@ -130,7 +140,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Logout error:", error);
     } finally {
       setUser(null);
-      // Clear the auth token cookie
+      // Clear the auth token from localStorage
+      localStorage.removeItem('auth_token');
+      // Also clear any cookies
       document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     }
   };

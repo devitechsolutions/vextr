@@ -32,12 +32,20 @@ export async function apiRequest(
     options = urlOrOptions || {};
   }
 
+  // Get token from localStorage for cross-domain auth
+  const token = localStorage.getItem('auth_token');
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const res = await fetch(url, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
+    headers,
     credentials: "include",
   });
 
@@ -58,8 +66,18 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const url = getApiUrl(queryKey[0] as string);
+
+    // Get token from localStorage for cross-domain auth
+    const token = localStorage.getItem('auth_token');
+    const headers: HeadersInit = {};
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const res = await fetch(url, {
       credentials: "include",
+      headers,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
