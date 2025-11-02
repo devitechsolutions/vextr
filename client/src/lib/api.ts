@@ -1,9 +1,9 @@
 // client/src/lib/api.ts
 
-// Get base path from Vite's import.meta.env.BASE_URL
-const BASE_PATH = import.meta.env.BASE_URL || '/';
+// Use Replit backend URL
+const API_BASE_URL = 'https://recruit-pro.replit.app';
 
-// Helper to construct full URL with base path
+// Helper to construct full URL
 function getFullUrl(url: string): string {
   // If URL is already absolute, return as-is
   if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -13,10 +13,7 @@ function getFullUrl(url: string): string {
   // Remove leading slash from url if present
   const cleanUrl = url.startsWith('/') ? url.slice(1) : url;
 
-  // Ensure base path ends with slash
-  const cleanBase = BASE_PATH.endsWith('/') ? BASE_PATH : `${BASE_PATH}/`;
-
-  return `${cleanBase}${cleanUrl}`;
+  return `${API_BASE_URL}/${cleanUrl}`;
 }
 
 export async function apiGet<T>(url: string): Promise<T> {
