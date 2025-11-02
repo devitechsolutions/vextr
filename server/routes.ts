@@ -61,9 +61,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Debug auth endpoint to confirm authentication is working
   app.get('/api/auth/debug', authenticateToken, (req, res) => {
     res.json({
-      hasCookie: Boolean(req.cookies?.['session-token']),
+      hasCookie: Boolean(req.cookies?.['token']),
+      cookies: req.cookies,
       user: req.user ?? null,
       message: 'Authentication working correctly'
+    });
+  });
+
+  // Debug endpoint to check cookies without auth requirement
+  app.get('/api/debug/cookies', (req, res) => {
+    res.json({
+      cookies: req.cookies,
+      headers: {
+        cookie: req.headers.cookie,
+        authorization: req.headers.authorization
+      }
     });
   });
 
