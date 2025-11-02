@@ -58,6 +58,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.redirect('/rportal/');
   });
 
+  // Debug endpoints to test routing
+  app.get('/rportal/api/test', (req, res) => {
+    res.json({ message: 'rportal API is working!', timestamp: new Date().toISOString() });
+  });
+
+  app.get('/api/test', (req, res) => {
+    res.json({ message: 'root API is working!', timestamp: new Date().toISOString() });
+  });
+
   // Debug auth endpoint to confirm authentication is working
   app.get('/api/auth/debug', authenticateToken, (req, res) => {
     res.json({
